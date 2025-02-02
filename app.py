@@ -179,3 +179,13 @@ def predict_sales(data):
 if st.button("Get Predictive Insights"):
     prediction = predict_sales(st.session_state.get('data', pd.DataFrame()))
     st.success(prediction)
+
+# Output/Results Section
+if 'linkedin_url' in st.session_state and st.session_state['linkedin_url']:
+    st.subheader("Summary of LinkedIn Insights")
+    linkedin_data = analyze_linkedin_profile(st.session_state['linkedin_url'])
+    st.write(f"The LinkedIn profile has {linkedin_data['employees']} employees, {linkedin_data['posts_last_month']} posts last month, with an engagement rate of {linkedin_data['engagement_rate']}.")
+
+if 'prediction' in st.session_state and st.session_state['prediction']:
+    st.subheader("Predictive Insights")
+    st.write(f"Sales are expected to increase by {st.session_state['prediction']} next quarter.")
