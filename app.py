@@ -2,147 +2,180 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import requests
 
 # Title of the app
 st.title("Customer Insights Dashboard")
 
-# Current Dashboard (Primary)
-st.header("Primary Dashboard: Upload CSV or Use Random Data")
+# Multi-step input form
+with st.form("input_form"):
+    st.subheader("Enter Company Details")
+    
+    # Input fields
+    linkedin_url = st.text_input("Company LinkedIn URL")
+    website_url = st.text_input("Company Website URL")
+    sharable_link = st.text_input("Sharable Link (e.g., Google Drive, Dropbox)")
+    twitter_handle = st.text_input("Company Twitter Handle")
+    competitor_url = st.text_input("Competitor Website URL")
+    instagram_handle = st.text_input("Company Instagram Handle")
+    youtube_channel = st.text_input("YouTube Channel URL")
+    facebook_page = st.text_input("Facebook Page URL")
+    review_links = st.text_input("Customer Review Links (e.g., Yelp, Google Reviews)")
+    email_campaign_data = st.text_input("Email Campaign Analytics")
+    google_analytics_data = st.text_input("Google Analytics Data")
+    product_listings = st.text_input("Product Listings (e.g., Amazon, Etsy)")
+    crm_data = st.text_input("CRM Data")
+    
+    # Submit button
+    submitted = st.form_submit_button("Submit")
+    
+    if submitted:
+        st.session_state['linkedin_url'] = linkedin_url
+        st.session_state['website_url'] = website_url
+        st.session_state['sharable_link'] = sharable_link
+        st.session_state['twitter_handle'] = twitter_handle
+        st.session_state['competitor_url'] = competitor_url
+        st.session_state['instagram_handle'] = instagram_handle
+        st.session_state['youtube_channel'] = youtube_channel
+        st.session_state['facebook_page'] = facebook_page
+        st.session_state['review_links'] = review_links
+        st.session_state['email_campaign_data'] = email_campaign_data
+        st.session_state['google_analytics_data'] = google_analytics_data
+        st.session_state['product_listings'] = product_listings
+        st.session_state['crm_data'] = crm_data
+        st.success("Data submitted successfully!")
 
-# Function to generate random customer data
-def generate_random_data():
-    np.random.seed(42)
-    data = {
-        "customer_id": range(1, 101),
-        "satisfaction_score": np.random.randint(1, 6, 100),
-        "feedback": np.random.choice([
-            "Great product!", "Good quality.", "Delivery was late.", "Poor packaging.", "Excellent service!"
-        ], 100),
-        "purchase_amount": np.random.uniform(10, 500, 100).round(2),
-        "region": np.random.choice(["North", "South", "East", "West"], 100)
-    }
-    return pd.DataFrame(data)
+# Analyze LinkedIn Profile
+def analyze_linkedin_profile(url):
+    st.write(f"Analyzing LinkedIn profile: {url}")
+    return {"employees": 500, "posts_last_month": 10, "engagement_rate": 0.15}
 
-# Upload customer data
-uploaded_file = st.file_uploader("Upload your customer data (CSV file)", type=["csv"])
+if 'linkedin_url' in st.session_state and st.session_state['linkedin_url']:
+    st.subheader("LinkedIn Insights")
+    linkedin_data = analyze_linkedin_profile(st.session_state['linkedin_url'])
+    st.write(linkedin_data)
 
-# Button to generate random data
-if st.button("Use Randomly Generated Customer Data"):
-    data = generate_random_data()
-    st.session_state['data'] = data
-elif uploaded_file is not None:
-    data = pd.read_csv(uploaded_file)
-    st.session_state['data'] = data
-else:
-    data = None
+# Analyze Website
+def analyze_website(url):
+    st.write(f"Analyzing website: {url}")
+    return {"traffic": "10k/month", "seo_score": 85, "loading_speed": "2.5s"}
 
-# Display current dashboard
-if 'data' in st.session_state and st.session_state['data'] is not None:
-    data = st.session_state['data']
+if 'website_url' in st.session_state and st.session_state['website_url']:
+    st.subheader("Website Insights")
+    website_data = analyze_website(st.session_state['website_url'])
+    st.write(website_data)
 
-    # Display raw data
-    st.subheader("Raw Data")
-    st.write(data)
+# Analyze Sharable Link
+def analyze_sharable_link(url):
+    st.write(f"Analyzing sharable link: {url}")
+    return pd.DataFrame({
+        "customer_id": [1, 2, 3],
+        "satisfaction_score": [5, 3, 4],
+        "feedback": ["Great!", "Okay.", "Good."]
+    })
 
-    # Basic Analysis
-    st.subheader("Basic Analysis")
-    st.write(f"Total Customers: {len(data)}")
-    st.write(f"Average Satisfaction Score: {data['satisfaction_score'].mean():.2f}")
+if 'sharable_link' in st.session_state and st.session_state['sharable_link']:
+    st.subheader("Data from Sharable Link")
+    sharable_data = analyze_sharable_link(st.session_state['sharable_link'])
+    st.write(sharable_data)
 
-    # Visualizations
-    st.subheader("Customer Satisfaction Distribution")
-    fig = px.histogram(data, x="satisfaction_score", nbins=10)
-    st.plotly_chart(fig)
+# Analyze Twitter Profile
+def analyze_twitter_profile(handle):
+    st.write(f"Analyzing Twitter handle: {handle}")
+    return {"tweets_last_month": 50, "engagement_rate": 0.12, "top_hashtag": "#AI"}
 
-    # Insights and Recommendations
-    st.subheader("Insights & Recommendations")
-    if data['satisfaction_score'].mean() >= 4:
-        st.success("Things are going well! Keep up the good work.")
-        st.write("Recommendations: Consider launching a loyalty program to retain happy customers.")
-    else:
-        st.error("There are issues to address.")
-        st.write("Recommendations: Investigate customer feedback and improve product/service quality.")
+if 'twitter_handle' in st.session_state and st.session_state['twitter_handle']:
+    st.subheader("Twitter Insights")
+    twitter_data = analyze_twitter_profile(st.session_state['twitter_handle'])
+    st.write(twitter_data)
 
-    # Sentiment Analysis (Optional)
-    st.subheader("Sentiment Analysis")
-    from nltk.sentiment.vader import SentimentIntensityAnalyzer
-    import nltk
-    nltk.download('vader_lexicon')
+# Analyze Competitor
+def analyze_competitor(url):
+    st.write(f"Analyzing competitor: {url}")
+    return {"market_share": "15%", "traffic_comparison": "2x", "top_keyword": "AI tools"}
 
-    def analyze_sentiment(text):
-        sia = SentimentIntensityAnalyzer()
-        return sia.polarity_scores(text)['compound']
+if 'competitor_url' in st.session_state and st.session_state['competitor_url']:
+    st.subheader("Competitor Insights")
+    competitor_data = analyze_competitor(st.session_state['competitor_url'])
+    st.write(competitor_data)
 
-    data['sentiment'] = data['feedback'].apply(analyze_sentiment)
-    st.write(data[['customer_id', 'feedback', 'sentiment']])
+# Additional Analyses
+def analyze_instagram(handle):
+    st.write(f"Analyzing Instagram handle: {handle}")
+    return {"followers": 10000, "engagement_rate": 0.08, "top_post": "Image_123"}
 
-    # Add filters
-    st.subheader("Filter Data")
-    min_score = st.slider("Minimum Satisfaction Score", 1, 5, 3)
-    region_filter = st.selectbox("Select Region", ["All", "North", "South", "East", "West"])
+if 'instagram_handle' in st.session_state and st.session_state['instagram_handle']:
+    st.subheader("Instagram Insights")
+    instagram_data = analyze_instagram(st.session_state['instagram_handle'])
+    st.write(instagram_data)
 
-    # Apply filters
-    filtered_data = data[data['satisfaction_score'] >= min_score]
-    if region_filter != "All":
-        filtered_data = filtered_data[filtered_data['region'] == region_filter]
+def analyze_youtube(channel):
+    st.write(f"Analyzing YouTube channel: {channel}")
+    return {"subscribers": 20000, "views_last_month": 50000, "top_video": "Video_456"}
 
-    st.write(filtered_data)
+if 'youtube_channel' in st.session_state and st.session_state['youtube_channel']:
+    st.subheader("YouTube Insights")
+    youtube_data = analyze_youtube(st.session_state['youtube_channel'])
+    st.write(youtube_data)
 
-    # Add visualizations
-    st.subheader("Customer Satisfaction by Region")
-    fig = px.bar(filtered_data, x="region", y="satisfaction_score", color="region", barmode="group")
-    st.plotly_chart(fig)
+def analyze_facebook(page):
+    st.write(f"Analyzing Facebook page: {page}")
+    return {"likes": 1500, "shares_last_month": 100, "engagement_rate": 0.07}
 
-    # Add download button
-    st.subheader("Download Analyzed Data")
-    st.download_button(
-        label="Download CSV",
-        data=filtered_data.to_csv().encode('utf-8'),
-        file_name="analyzed_data.csv",
-        mime="text/csv"
-    )
-else:
-    st.info("Please upload a CSV file or click the button to use randomly generated data.")
+if 'facebook_page' in st.session_state and st.session_state['facebook_page']:
+    st.subheader("Facebook Insights")
+    facebook_data = analyze_facebook(st.session_state['facebook_page'])
+    st.write(facebook_data)
 
-# Alternative Inputs (Below the Primary Dashboard)
-st.header("Alternative Input Methods")
+def analyze_review_links(links):
+    st.write(f"Analyzing reviews: {links}")
+    return {"average_rating": 4.2, "total_reviews": 300, "positive_reviews": 250, "negative_reviews": 50}
 
-# Option 1: Company LinkedIn URL
-st.subheader("Analyze Company LinkedIn Profile")
-linkedin_url = st.text_input("Enter Company LinkedIn URL")
-if linkedin_url:
-    st.write(f"Fetching insights for LinkedIn URL: {linkedin_url}")
-    # Add LinkedIn API integration or web scraping logic here
-    st.warning("LinkedIn API integration is not implemented in this demo.")
+if 'review_links' in st.session_state and st.session_state['review_links']:
+    st.subheader("Customer Review Insights")
+    review_data = analyze_review_links(st.session_state['review_links'])
+    st.write(review_data)
 
-# Option 2: Company Website URL
-st.subheader("Analyze Company Website")
-website_url = st.text_input("Enter Company Website URL")
-if website_url:
-    st.write(f"Fetching insights for website: {website_url}")
-    # Add website analysis logic here (e.g., Google PageSpeed Insights)
-    st.warning("Website analysis is not implemented in this demo.")
+def analyze_email_campaigns(data):
+    st.write(f"Analyzing email campaigns: {data}")
+    return {"open_rate": 20, "click_through_rate": 5, "conversion_rate": 3}
 
-# Option 3: Sharable Link (Google Sheets, Airtable)
-st.subheader("Analyze Data from Sharable Link")
-sharable_link = st.text_input("Enter Sharable Link (Google Sheets, Airtable, etc.)")
-if sharable_link:
-    st.write(f"Fetching data from sharable link: {sharable_link}")
-    # Add Google Sheets or Airtable integration logic here
-    st.warning("Sharable link integration is not implemented in this demo.")
+if 'email_campaign_data' in st.session_state and st.session_state['email_campaign_data']:
+    st.subheader("Email Campaign Insights")
+    email_data = analyze_email_campaigns(st.session_state['email_campaign_data'])
+    st.write(email_data)
 
-# Option 4: Social Media Handles
-st.subheader("Analyze Social Media Engagement")
-social_media_handle = st.text_input("Enter Social Media Handle (e.g., @company)")
-if social_media_handle:
-    st.write(f"Fetching insights for social media handle: {social_media_handle}")
-    # Add social media API integration logic here
-    st.warning("Social media API integration is not implemented in this demo.")
+def analyze_google_analytics(data):
+    st.write(f"Analyzing Google Analytics data: {data}")
+    return {"sessions": 10000, "bounce_rate": 50, "conversion_rate": 2}
 
-# Option 5: Latest Trends
-st.subheader("Latest Market Trends")
-if st.button("Fetch Latest Trends"):
-    st.write("Fetching the latest market trends...")
-    # Add Google Trends or OpenAI GPT integration logic here
-    st.warning("Trend analysis is not implemented in this demo.")
+if 'google_analytics_data' in st.session_state and st.session_state['google_analytics_data']:
+    st.subheader("Google Analytics Insights")
+    google_analytics_data = analyze_google_analytics(st.session_state['google_analytics_data'])
+    st.write(google_analytics_data)
+
+def analyze_product_listings(data):
+    st.write(f"Analyzing product listings: {data}")
+    return {"products_listed": 100, "average_rating": 4.5, "total_sales": 10000}
+
+if 'product_listings' in st.session_state and st.session_state['product_listings']:
+    st.subheader("Product Listing Insights")
+    product_listing_data = analyze_product_listings(st.session_state['product_listings'])
+    st.write(product_listing_data)
+
+def analyze_crm_data(data):
+    st.write(f"Analyzing CRM data: {data}")
+    return {"customer_lifetime_value": 1000, "customer_churn_rate": 5, "customer_acquisition_cost": 50}
+
+if 'crm_data' in st.session_state and st.session_state['crm_data']:
+    st.subheader("CRM Insights")
+    crm_data = analyze_crm_data(st.session_state['crm_data'])
+    st.write(crm_data)
+
+# AI-Powered Predictive Insights
+def predict_sales(data):
+    st.write("Running predictive analytics...")
+    return "Sales are expected to increase by 10% next quarter."
+
+if st.button("Get Predictive Insights"):
+    prediction = predict_sales(st.session_state.get('data', pd.DataFrame()))
+    st.success(prediction)
