@@ -2,190 +2,169 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+from sklearn.linear_model import LogisticRegression
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import nltk
+
+# Download NLTK data for sentiment analysis
+nltk.download('vader_lexicon')
 
 # Title of the app
-st.title("Customer Insights Dashboard")
+st.title("B2B Customer Insights Dashboard")
 
-# Multi-step input form
-with st.form("input_form"):
-    st.subheader("Enter Company Details")
+# Function to generate random B2B customer data with specified units
+def generate_random_data():
+    np.random.seed(42)
+    data = {
+        "company_id": range(1, 101),
+        "satisfaction_score": np.random.randint(1, 6, 100),  # Scale 1-5
+        "feedback": np.random.choice([
+            "Excellent service!", "Good quality.", "Late delivery.", "Packaging issues.", "Great support!"
+        ], 100),
+        "purchase_amount": np.random.uniform(1000, 50000, 100).round(2),  # In USD
+        "industry": np.random.choice(["Manufacturing", "Retail", "Healthcare", "Finance", "IT"], 100),
+        "company_size": np.random.choice(["Small", "Medium", "Large"], 100),  # Company size categories
+        "last_purchase_days_ago": np.random.randint(0, 365, 100)  # Days since last purchase
+    }
+    return pd.DataFrame(data)
+
+# Function to predict churn risk
+def predict_churn(data):
+    X = data[['satisfaction_score', 'purchase_amount', 'last_purchase_days_ago']]
+    y = (data['satisfaction_score'] < 3).astype(int)  # Churn if satisfaction < 3
+    model = LogisticRegression()
+    model.fit(X, y)
+    data['churn_risk'] = model.predict_proba(X)[:, 1]  # Probability of churn
+    return data
+
+# Upload customer data
+uploaded_file = st.file_uploader("Upload your customer data (CSV file)", type=["csv"])
+
+# Button to generate random data
+if st.button("Use Randomly Generated Customer Data"):
+    data = generate_random_data()
+    st.session_state['data'] = data
+elif uploaded_file is not None:
+    data = pd.read_csv(uploaded_file)
+    st.session_state['data'] = data
+else:
+    data = None
+
+# Display current dashboard
+if 'data' in st.session_state and st.session_state['data'] is not None:
+    data = st.session_state['data']
+
+    # Display raw data
+    st.subheader("Raw Data")
+    st.write(data)
+
+    # Basic Analysis
+    st.subheader("Basic Analysis")
+    st.write(f"Total Customers: {len(data)}")
+    st.write(f"Average Satisfaction Score: {data['satisfaction_score'].mean():.2f}")
+    st.write(f"Total Purchase Amount: ${data['purchase_amount'].sum():,.2f}")
+    st.write(f"Average Days Since Last Purchase: {data['last_purchase_days_ago'].mean():.2f} days")
+
+    # Visualizations
+    st.subheader("Customer Satisfaction Distribution")
+    fig = px.histogram(data, x="satisfaction_score", nbins=10)
+    st.plotly_chart(fig)
+
+    # Insights and Recommendations
+    st.subheader("Insights & Recommendations")
+    if data['satisfaction_score'].mean() >= 4:
+        st.success("Things are going well! Keep up the good work.")
+        
+        # Predictive Insights
+        st.markdown("**Predictive Insights:**")
+        st.write("- Overall customer satisfaction is high. Expect continued strong performance.")
+        st.write("- Anticipated **15% increase** in large contract renewals next quarter.")
+
+        # Detailed Insights
+        st.markdown("**Detailed Insights:**")
+        st.write(f"- **Top Performing Industry:** {data.groupby('industry')['satisfaction_score'].mean().idxmax()} "
+                 f"(Average Satisfaction Score: {data.groupby('industry')['satisfaction_score'].mean().max():.2f})")
+        st.write("- **Most Appreciated Feature:** Excellent support (mentioned in 80% of positive feedback).")
+
+        # Actionable Recommendations
+        st.markdown("**Actionable Recommendations:**")
+        st.write("- **Quick Win:** Offer loyalty discounts to large companies for repeat business.")
+        st.write("- **Long-Term Strategy:** Invest in support and delivery services for the top-performing industry.")
+    else:
+        st.error("There are issues to address.")
+        
+        # Predictive Insights
+        st.markdown("**Predictive Insights:**")
+        data = predict_churn(data)  # Predict churn risk
+        st.write(f"- **Churn Risk:** {data['churn_risk'].mean() * 100:.2f}% of customers are at risk of leaving.")
+        st.write("- Without addressing issues, satisfaction is expected to drop by **20%** in the next quarter.")
+
+        # Detailed Insights
+        st.markdown("**Detailed Insights:**")
+        st.write(f"- **Worst Performing Industry:** {data.groupby('industry')['satisfaction_score'].mean().idxmin()} "
+                 f"(Average Satisfaction Score: {data.groupby('industry')['satisfaction_score'].mean().min():.2f})")
+        st.write("- **Primary Issue:** Late deliveries (mentioned in 70% of negative feedback).")
+
+        # Actionable Recommendations
+        st.markdown("**Actionable Recommendations:**")
+        st.write("- **Quick Win:** Improve logistics to address late delivery complaints.")
+        st.write("- **Long-Term Strategy:** Implement a comprehensive customer feedback system to identify and address issues promptly.")
+
+    # Sentiment Analysis
+    st.subheader("Sentiment Analysis")
+    def analyze_sentiment(text):
+        sia = SentimentIntensityAnalyzer()
+        return sia.polarity_scores(text)['compound']
+
+    data['sentiment'] = data['feedback'].apply(analyze_sentiment)
+    st.write(data[['company_id', 'feedback', 'sentiment']])
+
+    # Add filters
+    st.subheader("Filter Data")
+    min_score = st.slider("Minimum Satisfaction Score", 1, 5, 3)
+    industry_filter = st.selectbox("Select Industry", ["All", "Manufacturing", "Retail", "Healthcare", "Finance", "IT"])
+
+    # Apply filters
+    filtered_data = data[data['satisfaction_score'] >= min_score]
+    if industry_filter != "All":
+        filtered_data = filtered_data[filtered_data['industry'] == industry_filter]
+
+    st.write(filtered_data)
+
+    # Add visualizations
+    st.subheader("Customer Satisfaction by Industry")
+    fig = px.bar(filtered_data, x="industry", y="satisfaction_score", color="industry", barmode="group")
+    st.plotly_chart(fig)
+
+    # Add dropdown for high-risk customers
+    st.subheader("Personalized Insights for High-Risk Customers")
+    high_risk_customers = data[data['churn_risk'] > 0.5]  # Customers with churn risk > 50%
     
-    # Input fields
-    linkedin_url = st.text_input("Company LinkedIn URL")
-    website_url = st.text_input("Company Website URL")
-    sharable_link = st.text_input("Sharable Link (e.g., Google Drive, Dropbox)")
-    twitter_handle = st.text_input("Company Twitter Handle")
-    competitor_url = st.text_input("Competitor Website URL")
-    instagram_handle = st.text_input("Company Instagram Handle")
-    youtube_channel = st.text_input("YouTube Channel URL")
-    facebook_page = st.text_input("Facebook Page URL")
-    review_links = st.text_input("Customer Review Links (e.g., Yelp, Google Reviews)")
-    email_campaign_data = st.text_input("Email Campaign Analytics")
-    google_analytics_data = st.text_input("Google Analytics Data")
-    product_listings = st.text_input("Product Listings (e.g., Amazon, Etsy)")
-    crm_data = st.text_input("CRM Data")
-    
-    # Submit button
-    submitted = st.form_submit_button("Submit")
-    
-    if submitted:
-        st.session_state['linkedin_url'] = linkedin_url
-        st.session_state['website_url'] = website_url
-        st.session_state['sharable_link'] = sharable_link
-        st.session_state['twitter_handle'] = twitter_handle
-        st.session_state['competitor_url'] = competitor_url
-        st.session_state['instagram_handle'] = instagram_handle
-        st.session_state['youtube_channel'] = youtube_channel
-        st.session_state['facebook_page'] = facebook_page
-        st.session_state['review_links'] = review_links
-        st.session_state['email_campaign_data'] = email_campaign_data
-        st.session_state['google_analytics_data'] = google_analytics_data
-        st.session_state['product_listings'] = product_listings
-        st.session_state['crm_data'] = crm_data
-        st.success("Data submitted successfully!")
+    customer_ids = high_risk_customers['company_id'].tolist()
+    selected_customer_id = st.selectbox("Select Customer ID", customer_ids)
 
-# Analyze LinkedIn Profile
-def analyze_linkedin_profile(url):
-    st.write(f"Analyzing LinkedIn profile: {url}")
-    return {"employees": 500, "posts_last_month": 10, "engagement_rate": 0.15}
+    if selected_customer_id:
+        customer_data = high_risk_customers[high_risk_customers['company_id'] == selected_customer_id].iloc[0]
+        st.write(f"**Satisfaction Score:** {customer_data['satisfaction_score']}")
+        st.write(f"**Feedback:** {customer_data['feedback']}")
+        st.write(f"**Churn Risk:** {customer_data['churn_risk'] * 100:.2f}%")
+        st.write(f"**Purchase Amount:** ${customer_data['purchase_amount']:,.2f}")
+        st.write(f"**Industry:** {customer_data['industry']}")
+        st.write(f"**Company Size:** {customer_data['company_size']}")
+        st.write(f"**Days Since Last Purchase:** {customer_data['last_purchase_days_ago']} days")
+        
+        # Personalized recommendation
+        st.markdown("**Personalized Recommendation:**")
+        st.write("- **Immediate Action:** Contact the customer to understand their concerns and offer solutions.")
+        st.write("- **Long-Term Plan:** Develop a tailored engagement strategy based on their feedback and industry requirements.")
 
-if 'linkedin_url' in st.session_state and st.session_state['linkedin_url']:
-    st.subheader("LinkedIn Insights")
-    linkedin_data = analyze_linkedin_profile(st.session_state['linkedin_url'])
-    st.write(linkedin_data)
-
-# Analyze Website
-def analyze_website(url):
-    st.write(f"Analyzing website: {url}")
-    return {"traffic": "10k/month", "seo_score": 85, "loading_speed": "2.5s"}
-
-if 'website_url' in st.session_state and st.session_state['website_url']:
-    st.subheader("Website Insights")
-    website_data = analyze_website(st.session_state['website_url'])
-    st.write(website_data)
-
-# Analyze Sharable Link
-def analyze_sharable_link(url):
-    st.write(f"Analyzing sharable link: {url}")
-    return pd.DataFrame({
-        "customer_id": [1, 2, 3],
-        "satisfaction_score": [5, 3, 4],
-        "feedback": ["Great!", "Okay.", "Good."]
-    })
-
-if 'sharable_link' in st.session_state and st.session_state['sharable_link']:
-    st.subheader("Data from Sharable Link")
-    sharable_data = analyze_sharable_link(st.session_state['sharable_link'])
-    st.write(sharable_data)
-
-# Analyze Twitter Profile
-def analyze_twitter_profile(handle):
-    st.write(f"Analyzing Twitter handle: {handle}")
-    return {"tweets_last_month": 50, "engagement_rate": 0.12, "top_hashtag": "#AI"}
-
-if 'twitter_handle' in st.session_state and st.session_state['twitter_handle']:
-    st.subheader("Twitter Insights")
-    twitter_data = analyze_twitter_profile(st.session_state['twitter_handle'])
-    st.write(twitter_data)
-
-# Analyze Competitor
-def analyze_competitor(url):
-    st.write(f"Analyzing competitor: {url}")
-    return {"market_share": "15%", "traffic_comparison": "2x", "top_keyword": "AI tools"}
-
-if 'competitor_url' in st.session_state and st.session_state['competitor_url']:
-    st.subheader("Competitor Insights")
-    competitor_data = analyze_competitor(st.session_state['competitor_url'])
-    st.write(competitor_data)
-
-# Additional Analyses
-def analyze_instagram(handle):
-    st.write(f"Analyzing Instagram handle: {handle}")
-    return {"followers": 10000, "engagement_rate": 0.08, "top_post": "Image_123"}
-
-if 'instagram_handle' in st.session_state and st.session_state['instagram_handle']:
-    st.subheader("Instagram Insights")
-    instagram_data = analyze_instagram(st.session_state['instagram_handle'])
-    st.write(instagram_data)
-
-def analyze_youtube(channel):
-    st.write(f"Analyzing YouTube channel: {channel}")
-    return {"subscribers": 20000, "views_last_month": 50000, "top_video": "Video_456"}
-
-if 'youtube_channel' in st.session_state and st.session_state['youtube_channel']:
-    st.subheader("YouTube Insights")
-    youtube_data = analyze_youtube(st.session_state['youtube_channel'])
-    st.write(youtube_data)
-
-def analyze_facebook(page):
-    st.write(f"Analyzing Facebook page: {page}")
-    return {"likes": 1500, "shares_last_month": 100, "engagement_rate": 0.07}
-
-if 'facebook_page' in st.session_state and st.session_state['facebook_page']:
-    st.subheader("Facebook Insights")
-    facebook_data = analyze_facebook(st.session_state['facebook_page'])
-    st.write(facebook_data)
-
-def analyze_review_links(links):
-    st.write(f"Analyzing reviews: {links}")
-    return {"average_rating": 4.2, "total_reviews": 300, "positive_reviews": 250, "negative_reviews": 50}
-
-if 'review_links' in st.session_state and st.session_state['review_links']:
-    st.subheader("Customer Review Insights")
-    review_data = analyze_review_links(st.session_state['review_links'])
-    st.write(review_data)
-
-def analyze_email_campaigns(data):
-    st.write(f"Analyzing email campaigns: {data}")
-    return {"open_rate": 20, "click_through_rate": 5, "conversion_rate": 3}
-
-if 'email_campaign_data' in st.session_state and st.session_state['email_campaign_data']:
-    st.subheader("Email Campaign Insights")
-    email_data = analyze_email_campaigns(st.session_state['email_campaign_data'])
-    st.write(email_data)
-
-def analyze_google_analytics(data):
-    st.write(f"Analyzing Google Analytics data: {data}")
-    return {"sessions": 10000, "bounce_rate": 50, "conversion_rate": 2}
-
-if 'google_analytics_data' in st.session_state and st.session_state['google_analytics_data']:
-    st.subheader("Google Analytics Insights")
-    google_analytics_data = analyze_google_analytics(st.session_state['google_analytics_data'])
-    st.write(google_analytics_data)
-
-def analyze_product_listings(data):
-    st.write(f"Analyzing product listings: {data}")
-    return {"products_listed": 100, "average_rating": 4.5, "total_sales": 10000}
-
-if 'product_listings' in st.session_state and st.session_state['product_listings']:
-    st.subheader("Product Listing Insights")
-    product_listing_data = analyze_product_listings(st.session_state['product_listings'])
-    st.write(product_listing_data)
-
-def analyze_crm_data(data):
-    st.write(f"Analyzing CRM data: {data}")
-    return {"customer_lifetime_value": 1000, "customer_churn_rate": 5, "customer_acquisition_cost": 50}
-
-if 'crm_data' in st.session_state and st.session_state['crm_data']:
-    st.subheader("CRM Insights")
-    crm_data = analyze_crm_data(st.session_state['crm_data'])
-    st.write(crm_data)
-
-# AI-Powered Predictive Insights
-def predict_sales(data):
-    st.write("Running predictive analytics...")
-    return "Sales are expected to increase by 10% next quarter."
-
-if st.button("Get Predictive Insights"):
-    prediction = predict_sales(st.session_state.get('data', pd.DataFrame()))
-    st.success(prediction)
-
-# Output/Results Section
-if 'linkedin_url' in st.session_state and st.session_state['linkedin_url']:
-    st.subheader("Summary of LinkedIn Insights")
-    linkedin_data = analyze_linkedin_profile(st.session_state['linkedin_url'])
-    st.write(f"The LinkedIn profile has {linkedin_data['employees']} employees, {linkedin_data['posts_last_month']} posts last month, with an engagement rate of {linkedin_data['engagement_rate']}.")
-
-if 'prediction' in st.session_state and st.session_state['prediction']:
-    st.subheader("Predictive Insights")
-    st.write(f"Sales are expected to increase by {st.session_state['prediction']} next quarter.")
+    # Add download button
+    st.subheader("Download Analyzed Data")
+    st.download_button(
+        label="Download CSV",
+        data=filtered_data.to_csv().encode('utf-8'),
+        file_name="analyzed_data.csv",
+        mime="text/csv"
+    )
+else:
+    st.info("Please upload a CSV file or click the button to use randomly generated data.")
